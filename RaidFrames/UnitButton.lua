@@ -1621,7 +1621,11 @@ local function UnitButton_UpdateDebuffs(self, isFullUpdate)
                         frame:SetCooldownFromAura(
                             unit, auraInstanceID, auraInfo.icon, refreshing)
                         if frame.cooldown and frame.cooldown.SetSwipeColor then
-                            frame.cooldown:SetSwipeColor(0, 0, 0)
+                            if frame.disableHighlight then
+                                frame.cooldown:SetSwipeColor(0, 0, 0, 0)
+                            else
+                                frame.cooldown:SetSwipeColor(0, 0, 0)
+                            end
                         end
                         if frame.disableHighlight then
                             if frame.border then frame.border:Hide() end
@@ -1713,7 +1717,11 @@ local function UnitButton_UpdateDebuffs(self, isFullUpdate)
                 -- Border = dispel type color (base), swipe = black (fills over as time expires).
                 -- SetReverse(true) in SetCooldownFromAura makes the swipe fill IN.
                 if frame.cooldown and frame.cooldown.SetSwipeColor then
-                    frame.cooldown:SetSwipeColor(0, 0, 0)
+                    if frame.disableHighlight then
+                        frame.cooldown:SetSwipeColor(0, 0, 0, 0)
+                    else
+                        frame.cooldown:SetSwipeColor(0, 0, 0)
+                    end
                 end
                 local br, bg, bb = 1, 0, 0
                 if auraInfo._hasSecrets and (auraInfo.dispelName == nil) then

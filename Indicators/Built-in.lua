@@ -1220,10 +1220,6 @@ local function PrivateAuras_UpdatePrivateAuraAnchor(self, unit)
         local _showCountdownFrame, _showCountdownNumbers = true, false
         if type(self.showCountdownFrame) == "boolean" then _showCountdownFrame = self.showCountdownFrame end
         if type(self.showCountdownNumbers) == "boolean" then _showCountdownNumbers = self.showCountdownNumbers end
-        if self.disableHighlight then
-            _showCountdownFrame = false
-            _showCountdownNumbers = true
-        end
 
         for i = 1, maxAuras do
             local holder = self[i]

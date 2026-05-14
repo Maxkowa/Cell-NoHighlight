@@ -143,6 +143,42 @@ function I.Cooldowns_ShowAnimation(self, show)
     end
 end
 
+-- Flips the container's anchor corner so right-to-left / bottom-to-top
+-- orientations actually grow the icons in the chosen direction instead of
+-- dragging existing icons as the container widens from a fixed left/top edge.
+function I.GrowDirAnchor(self)
+    if not self._userPoint then return end
+    local point = self._userPoint
+    local x, y = self._userX or 0, self._userY or 0
+    local iconW = (self.normalSize and self.normalSize[1]) or self.width or 0
+    local iconH = (self.normalSize and self.normalSize[2]) or self.height or 0
+
+    if self.orientation == "right-to-left" then
+        if point:find("LEFT$") then
+            point = point:gsub("LEFT$", "RIGHT")
+            x = x + iconW
+        end
+    elseif self.orientation == "left-to-right" then
+        if point:find("RIGHT$") then
+            point = point:gsub("RIGHT$", "LEFT")
+            x = x - iconW
+        end
+    elseif self.orientation == "bottom-to-top" then
+        if point:find("^BOTTOM") then
+            point = point:gsub("^BOTTOM", "TOP")
+            y = y + iconH
+        end
+    elseif self.orientation == "top-to-bottom" then
+        if point:find("^TOP") then
+            point = point:gsub("^TOP", "BOTTOM")
+            y = y - iconH
+        end
+    end
+
+    self._appliedPoint = point
+    self:_SetPoint(point, self._userRelativeTo, self._userRelativePoint, x, y)
+end
+
 function I.Cooldowns_SetDisableHighlight(self, disable)
     self.disableHighlight = disable
     for i = 1, #self do
@@ -472,19 +508,25 @@ local function Debuffs_SetFont(self, ...)
 end
 
 local function Debuffs_SetPoint(self, point, relativeTo, relativePoint, x, y)
-    self:_SetPoint(point, relativeTo, relativePoint, x, y)
+    self._userPoint = point
+    self._userRelativeTo = relativeTo
+    self._userRelativePoint = relativePoint
+    self._userX = x or 0
+    self._userY = y or 0
+    I.GrowDirAnchor(self)
+    local applied = self._appliedPoint or point
 
-    if string.find(point, "LEFT$") then
+    if string.find(applied, "LEFT$") then
         self.hAlignment = "LEFT"
-    elseif string.find(point, "RIGHT$") then
+    elseif string.find(applied, "RIGHT$") then
         self.hAlignment = "RIGHT"
     else
         self.hAlignment = ""
     end
 
-    if string.find(point, "^TOP") then
+    if string.find(applied, "^TOP") then
         self.vAlignment = "TOP"
-    elseif string.find(point, "^BOTTOM") then
+    elseif string.find(applied, "^BOTTOM") then
         self.vAlignment = "BOTTOM"
     else
         self.vAlignment = ""
@@ -494,15 +536,33 @@ local function Debuffs_SetPoint(self, point, relativeTo, relativePoint, x, y)
         self.vAlignment = "CENTER"
     end
 
-    -- self[1]:ClearAllPoints()
-    -- self[1]:SetPoint(self.vAlignment..self.hAlignment)
-    -- --! update icons
     self:SetOrientation(self.orientation or "left-to-right")
 end
 
 --! NOTE: SetPoint must be invoked before SetOrientation
 local function Debuffs_SetOrientation(self, orientation)
     self.orientation = orientation
+    I.GrowDirAnchor(self)
+    local applied = self._appliedPoint
+    if applied then
+        if applied:find("LEFT$") then
+            self.hAlignment = "LEFT"
+        elseif applied:find("RIGHT$") then
+            self.hAlignment = "RIGHT"
+        else
+            self.hAlignment = ""
+        end
+        if applied:find("^TOP") then
+            self.vAlignment = "TOP"
+        elseif applied:find("^BOTTOM") then
+            self.vAlignment = "BOTTOM"
+        else
+            self.vAlignment = ""
+        end
+        if self.hAlignment == "" and self.vAlignment == "" then
+            self.vAlignment = "CENTER"
+        end
+    end
     local point1, point2, v, h
     v = self.vAlignment == "CENTER" and "" or self.vAlignment
     h = self.hAlignment
@@ -1075,7 +1135,20 @@ function I.CreateRaidDebuffs(parent)
     raidDebuffs.SetBorder = I.Cooldowns_SetBorder
     raidDebuffs.UpdateSize = I.Cooldowns_UpdateSize_WithSpacing
     raidDebuffs.ShowDuration = I.Cooldowns_ShowDuration
-    raidDebuffs.SetOrientation = I.Cooldowns_SetOrientation_WithSpacing
+    raidDebuffs._RawSetOrientation = I.Cooldowns_SetOrientation_WithSpacing
+    raidDebuffs.SetOrientation = function(self, orientation)
+        self:_RawSetOrientation(orientation)
+        I.GrowDirAnchor(self)
+    end
+    raidDebuffs._SetPoint = raidDebuffs.SetPoint
+    raidDebuffs.SetPoint = function(self, point, relativeTo, relativePoint, x, y)
+        self._userPoint = point
+        self._userRelativeTo = relativeTo
+        self._userRelativePoint = relativePoint
+        self._userX = x or 0
+        self._userY = y or 0
+        I.GrowDirAnchor(self)
+    end
     raidDebuffs.SetFont = I.Cooldowns_SetFont
     raidDebuffs.SetDisableHighlight = I.Cooldowns_SetDisableHighlight
     raidDebuffs.ShowGlow = RaidDebuffs_ShowGlow
@@ -1273,7 +1346,20 @@ function I.CreatePrivateAuras(parent)
         end
         self:UpdatePrivateAuraAnchor(self.unit)
     end
-    privateAuras.SetOrientation = I.Cooldowns_SetOrientation_WithSpacing
+    privateAuras._RawSetOrientation = I.Cooldowns_SetOrientation_WithSpacing
+    privateAuras.SetOrientation = function(self, orientation)
+        self:_RawSetOrientation(orientation)
+        I.GrowDirAnchor(self)
+    end
+    privateAuras._SetPoint = privateAuras.SetPoint
+    privateAuras.SetPoint = function(self, point, relativeTo, relativePoint, x, y)
+        self._userPoint = point
+        self._userRelativeTo = relativeTo
+        self._userRelativePoint = relativePoint
+        self._userX = x or 0
+        self._userY = y or 0
+        I.GrowDirAnchor(self)
+    end
     privateAuras.SetNumPerLine = I.Cooldowns_SetNumPerLine_WithSpacing
     privateAuras.SetSpacing = I.Cooldowns_SetSpacing_WithSpacing
     privateAuras.maxAuras = 1
